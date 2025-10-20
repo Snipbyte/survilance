@@ -16,9 +16,9 @@ module.exports = {
         headingColor: "#0f172a", //slate-900
         slateColor: "#cbd5e1", //slate-300
         desColor: "#0f172a", //slate-900
-        paraColor: "#9ca3af", //gray-400
+        paraColor: "#4B5563", //from figma
         btnColor: "#0f172a", //slate-900
-        blueColor: "#4f46e5", // blue-600
+        blueColor: "#2563EB", // from figma
         hoverBtnColor: "#1e293b", //slate-800
         themeColor: "#020617", //slate-950
       },

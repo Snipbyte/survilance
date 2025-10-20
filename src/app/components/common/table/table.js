@@ -85,10 +85,10 @@ const Table = ({
         </div>
       )} */}
       {/* Table */}
-      <div className="overflow-auto">
-        <table className="min-w-full bg-white border border-gray-300">
-          <thead className="bg-gray-200">
-            <tr className="bg-blueColor text-white whitespace-nowrap">
+      <div className="overflow-auto rounded-md">
+        <table className="min-w-full bg-white border border-gray-300 rounded-md">
+          <thead className="bg-gray-200 rounded-md">
+            <tr className="bg-lightCard text-headingColor whitespace-nowrap">
               {columns.map((column, index) => (
                 <th key={index} className="py-2 px-4 text-left">
                   {column.header}
@@ -100,7 +100,7 @@ const Table = ({
             {currentRows.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
-                className={`${rowIndex % 2 === 0 ? "bg-gray-100" : "bg-white"}`}
+                className={` border-b ${rowIndex % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
               >
                 {columns.map((column, colIndex) => (
                   <td key={colIndex} className="px-4 py-2 text-headingColor">

@@ -1,12 +1,10 @@
-
 import React, { useState } from "react";
 
-const Pagination = ({ pageCount, onPageChange }) => {
-  const [currentPage, setCurrentPage] = useState(0);
-
+const Pagination = ({ pageCount, onPageChange, totalResults, resultsPerPage, currentPage }) => {
+  // Use the currentPage prop instead of local state to sync with parent
   const handlePageClick = (selectedPage) => {
-    setCurrentPage(selectedPage); // Update the active page
-    onPageChange({ selected: selectedPage }); // Call the parent handler
+    if (selectedPage < 0 || selectedPage >= pageCount) return; // Prevent invalid pages
+    onPageChange(selectedPage);
   };
 
   const renderPageNumbers = () => {
@@ -15,12 +13,12 @@ const Pagination = ({ pageCount, onPageChange }) => {
       pages.push(
         <li
           key={i}
-          className={`px-3 py-2 mx-1 text-sm font-medium border border-slateColor rounded-lg cursor-pointer ${
-            currentPage === i
-              ? "bg-blueColor text-white"
-              : "bg-whiteColor text-darkCard hover:bg-lightCard"
-          }`}
           onClick={() => handlePageClick(i)}
+          className={`px-3 py-1 cursor-pointer text-sm font-medium border rounded-md transition-colors duration-200
+            ${currentPage === i
+              ? "bg-blue-600 text-white border-blue-600"
+              : "text-gray-700 bg-white border-gray-300 hover:bg-lightCard"
+            }`}
         >
           {i + 1}
         </li>
@@ -29,22 +27,45 @@ const Pagination = ({ pageCount, onPageChange }) => {
     return pages;
   };
 
+  const startResult = currentPage * resultsPerPage + 1;
+  const endResult = Math.min((currentPage + 1) * resultsPerPage, totalResults);
+
   return (
-    <ul className="flex items-center justify-center my-4">
-      <li
-        className="px-3 py-2 mx-1 text-sm font-medium text-darkCard bg-white border border-slateColor rounded-lg cursor-pointer hover:bg-lightCard"
-        onClick={() => handlePageClick(0)}
-      >
-        Previous
-      </li>
-      {renderPageNumbers()}
-      <li
-        className="px-3 py-2 mx-1 text-sm font-medium text-darkCard bg-white border border-slateColor rounded-lg cursor-pointer hover:bg-lightCard"
-        onClick={() => handlePageClick(pageCount - 1)}
-      >
-        Next
-      </li>
-    </ul>
+    <div className="flex items-center justify-between mt-6">
+      {/* Left side text */}
+      <p className="text-sm text-paraColor">
+        Showing <span className="font-medium">{startResult}</span> to{" "}
+        <span className="font-medium">{endResult}</span> of{" "}
+        <span className="font-medium">{totalResults}</span> results
+      </p>
+
+      {/* Pagination controls */}
+      <ul className="flex items-center space-x-1">
+        <li
+          onClick={() => handlePageClick(currentPage - 1)}
+          className={`px-3 py-1 cu text-sm font-medium border rounded-md transition-colors duration-200
+            ${currentPage === 0
+              ? "text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed"
+              : "text-gray-700 bg-white border-gray-300 hover:bg-lightCard cursor-pointer"
+            }`}
+        >
+          Previous
+        </li>
+
+        {renderPageNumbers()}
+
+        <li
+          onClick={() => handlePageClick(currentPage + 1)}
+          className={`px-3 py-1 cursor-pointer text-sm font-medium border rounded-md transition-colors duration-200
+            ${currentPage === pageCount - 1
+              ? "text-gray-400 border-gray-200 bg-gray-100 cursor-not-allowed"
+              : "text-gray-700 bg-white border-gray-300 hover:bg-lightCard cursor-pointer"
+            }`}
+        >
+          Next
+        </li>
+      </ul>
+    </div>
   );
 };
 
