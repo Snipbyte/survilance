@@ -9,7 +9,6 @@ const errorResponse = (message, status = 400) =>
 
 // Utility: Random integer between min & max
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
 // Utility: Generate all dates between start and end (inclusive)
 const getDateRange = (start, end) => {
   const dates = [];
