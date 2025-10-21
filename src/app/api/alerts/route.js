@@ -25,18 +25,48 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const modelType = searchParams.get("modelType");
+    const macAddress = searchParams.get("macAddress");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
     const page = parseNumber(searchParams.get("page"), 1);
     const limit = parseNumber(searchParams.get("limit"), 10);
 
-    if (!modelType) {
-      return errorResponse("modelType is required");
+    if (!modelType) return errorResponse("modelType is required");
+
+    // Build dynamic query
+    const query = { modelType };
+
+    // Filter by MAC address (optional)
+    if (macAddress) {
+      const formattedMac = macAddress.trim().toUpperCase();
+      if (!isValidMacAddress(formattedMac)) {
+        return errorResponse("Invalid macAddress format (expected AA:BB:CC:DD:EE:FF)");
+      }
+      query.macAddress = formattedMac;
     }
 
-    // Count total for pagination
-    const total = await AlertHistory.countDocuments({ modelType });
+    // Filter by date range (optional)
+    if (dateFrom || dateTo) {
+      query.recordedAt = {};
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        if (isNaN(from.getTime())) return errorResponse("Invalid dateFrom format");
+        query.recordedAt.$gte = from;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        if (isNaN(to.getTime())) return errorResponse("Invalid dateTo format");
+        // Extend end date to include full day (23:59:59)
+        to.setHours(23, 59, 59, 999);
+        query.recordedAt.$lte = to;
+      }
+    }
 
-    // Apply skip & limit
-    const records = await AlertHistory.find({ modelType })
+    // Count total records
+    const total = await AlertHistory.countDocuments(query);
+
+    // Fetch paginated records
+    const records = await AlertHistory.find(query)
       .select("-__v -createdAt -updatedAt")
       .sort({ recordedAt: -1 })
       .skip((page - 1) * limit)
