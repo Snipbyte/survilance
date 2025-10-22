@@ -6,6 +6,7 @@ import OrganizationUser from "../../../../../../../models/organization.user.mode
 import OrganizationUserRole from "../../../../../../../models/organization.userrole.model";
 import { authMiddleware } from "../../../../../../../middleware/authMiddleware";
 
+
 export async function GET(request, { params }) {
   const authResult = await authMiddleware("orgUserToken", "user", "read")(request);
   if (authResult.error) {
@@ -21,7 +22,13 @@ export async function GET(request, { params }) {
 
   try {
     await connectDB();
-    const user = await OrganizationUser.findOne({ _id: id, organizationId }).populate("userRole").select("-userPassword");
+    const user = await OrganizationUser.findOne({ _id: id, organizationId })
+      .populate({
+        path: "userRole",
+        model: "OrganizationUserRole", // Explicitly specify the model
+        select: "name", // Populate only the 'name' field
+      })
+      .select("-userPassword");
 
     if (!user) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });

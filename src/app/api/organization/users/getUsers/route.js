@@ -32,7 +32,11 @@ export async function GET(request) {
 
     const users = await OrganizationUser.find(query)
       .select("-userPassword") // Exclude password
-      .populate("userRole")
+      .populate({
+        path: "userRole",
+        model: "OrganizationUserRole", // Explicitly specify the model
+        select: "name", // Populate only the 'name' field
+      })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);

@@ -16,6 +16,7 @@ const ALL_RESOURCES = [
 
 const ALL_PERMISSIONS = ["create", "read", "update", "delete"];
 
+
 export async function POST(request) {
   try {
     const { emailOrUserId, password } = await request.json();
@@ -33,8 +34,12 @@ export async function POST(request) {
         { userId: emailOrUserId.trim() }
       ]
     })
-      .populate("organizationId")
-      .populate("userRole");
+      .populate({
+        path: "userRole",
+        model: "OrganizationUserRole", // Explicitly specify the model
+        select: "name permissions", // Populate 'name' and 'permissions'
+      })
+      .populate("organizationId");
 
     if (!user) {
       return NextResponse.json({ error: "Invalid email/user ID or password." }, { status: 401 });

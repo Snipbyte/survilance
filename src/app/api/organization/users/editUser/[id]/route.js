@@ -39,12 +39,17 @@ export async function PUT(request, { params }) {
     }
     if (userRole) updateData.userRole = userRole;
     if (userStatus) updateData.userStatus = userStatus;
+   
 
     const updatedUser = await OrganizationUser.findOneAndUpdate(
       { _id: id, organizationId },
       { $set: updateData },
       { new: true }
-    ).populate("userRole");
+    ).populate({
+      path: "userRole",
+      model: "OrganizationUserRole", // Explicitly specify the model
+      select: "name", // Populate only the 'name' field
+    });
 
     if (!updatedUser) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });

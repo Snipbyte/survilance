@@ -17,10 +17,17 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 10;
+    const search = searchParams.get("search") || "";
     const skip = (page - 1) * limit;
 
-    const total = await OrganizationUserRole.countDocuments({ organizationId });
-    const roles = await OrganizationUserRole.find({ organizationId })
+    // Build query object
+    const query = { organizationId };
+    if (search) {
+      query.name = { $regex: search, $options: "i" }; // Case-insensitive search
+    }
+
+    const total = await OrganizationUserRole.countDocuments(query);
+    const roles = await OrganizationUserRole.find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });

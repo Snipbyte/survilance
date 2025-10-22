@@ -3,6 +3,7 @@ import { connectDB } from "../../../../../../lib/mongodb";
 import OrganizationUser from "../../../../../../models/organization.user.model";
 import Organization from "../../../../../../models/organization.model";
 import { authMiddleware } from "../../../../../../middleware/authMiddleware";
+import OrganizationUserRole from "../../../../../../models/organization.userrole.model";
 
 export async function GET(request) {
   // Authenticate and authorize
@@ -20,7 +21,11 @@ export async function GET(request) {
     // Fetch fresh user data from DB (in case profile changed after login)
     const user = await OrganizationUser.findById(userId)
       .populate("organizationId")
-      .populate("userRole")
+      .populate({
+        path: "userRole",
+        model: "OrganizationUserRole", // Explicitly specify the model
+        select: "name permissions", // Populate 'name' and 'permissions'
+      })
       .lean();
 
     if (!user) {

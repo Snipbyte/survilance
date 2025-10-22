@@ -32,7 +32,8 @@ export async function POST(request) {
     return NextResponse.json(authResult, { status: authResult.status });
   }
 
-  const { organizationId, userFullName } = authResult;
+  const { organizationId, userFullName  } = authResult;
+
 
   try {
     await connectDB();
@@ -87,7 +88,7 @@ export async function POST(request) {
       name: normalizedRoleName,
       description: description.trim(),
       permissions,
-      createdBy: authResult.userFullName || "System",
+      createdBy: authResult._id || "System",
     });
 
     await newRole.save();
