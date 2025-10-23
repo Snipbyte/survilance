@@ -91,13 +91,16 @@ export async function POST(req) {
 
     for (const date of allDates) {
       for (let i = 0; i < recordsPerDay; i++) {
-        // Randomly pick 3–12 alert types for this record
-        const countToPick = randomInt(3, 12);
-        const selectedKeys = alertKeys.sort(() => 0.5 - Math.random()).slice(0, countToPick);
-
+        // Randomly pick 2–4 parent keys and nested alert types
+        const outerKeys = alertKeys.sort(() => 0.5 - Math.random()).slice(0, randomInt(1, 3));
         const alertTypeCounts = {};
-        selectedKeys.forEach((key) => {
-          alertTypeCounts[key] = randomInt(1, 20);
+
+        outerKeys.forEach((outerKey) => {
+          const innerKeys = alertKeys.sort(() => 0.5 - Math.random()).slice(0, randomInt(3, 8));
+          alertTypeCounts[outerKey] = {};
+          innerKeys.forEach((innerKey) => {
+            alertTypeCounts[outerKey][innerKey] = true;
+          });
         });
 
         bulkDocs.push({

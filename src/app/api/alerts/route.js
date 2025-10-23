@@ -121,12 +121,17 @@ export async function POST(req) {
       return errorResponse("alertTypeCounts must be a valid object");
     }
 
-    // Validate each value is a number
-    for (const [key, value] of Object.entries(body.alertTypeCounts)) {
-      if (typeof value !== "number" || value < 0) {
-        return errorResponse(
-          `Invalid count for key '${key}': must be a non-negative number`
-        );
+    // Updated validation for nested structure
+    for (const [outerKey, innerMap] of Object.entries(body.alertTypeCounts)) {
+      if (typeof innerMap !== "object" || Array.isArray(innerMap)) {
+        return errorResponse(`alertTypeCounts['${outerKey}'] must be an object`);
+      }
+      for (const [innerKey, value] of Object.entries(innerMap)) {
+        if (typeof value !== "boolean") {
+          return errorResponse(
+            `Invalid value for alertTypeCounts['${outerKey}']['${innerKey}']: must be a boolean`
+          );
+        }
       }
     }
 

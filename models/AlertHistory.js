@@ -10,7 +10,10 @@ const alertHistorySchema = new mongoose.Schema(
     },
     alertTypeCounts: {
       type: Map,
-      of: Number,
+      of: {
+        type: Map,
+        of: Boolean,
+      },
       required: true,
     },
     recordedAt: {
@@ -29,4 +32,17 @@ const alertHistorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const AlertHistory = mongoose.models.AlertHistory || mongoose.model("AlertHistory", alertHistorySchema);
+export const AlertHistory =
+  mongoose.models.AlertHistory ||
+  mongoose.model("AlertHistory", alertHistorySchema);
+
+
+//   {
+//   "modelType": "DeviceX",
+//   "macAddress": "AB:CD:EF:12:34:56",
+//   "alertTypeCounts": {
+//     "1": { "1": true, "3": true, "8": true, "12": true, "11": true },
+//     "2": { "3": true, "11": true, "12": true, "1": true }
+//   },
+//   "recordedAt": "2024-06-15T10:20:30Z"
+// }
