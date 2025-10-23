@@ -157,7 +157,7 @@ const Header = ({ variant = "default" }) => {
               <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 flex items-center gap-1 duration-300 text-sm mb-2 md:mb-0">
                 <MdOutlineArrowBack /> Back to Dashboard
               </Link>
-              <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
+              {/* <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
                 <button className="bg-red-600 text-white rounded-md px-2 py-1 text-sm flex items-center justify-center gap-1 w-full md:w-auto mb-2 md:mb-0">
                   <FaFilePdf />PDF
                 </button>
@@ -167,7 +167,7 @@ const Header = ({ variant = "default" }) => {
                 <button className="bg-blue-600 text-white rounded-md px-2 py-1 text-sm flex items-center justify-center gap-1 w-full md:w-auto">
                   <FaFileExcel />XLSX
                 </button>
-              </div>
+              </div> */}
               <FaBell className="text-gray-600 text-sm w-6 h-6 md:w-auto md:h-auto mb-2 md:mb-0" />
               <div className="relative">
                 <div

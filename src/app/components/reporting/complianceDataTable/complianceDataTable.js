@@ -113,12 +113,12 @@ const ComplianceDataTable = ({ filters }) => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-800">Compliance Data Table</h2>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+          {/* <button className="flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm text-gray-700 hover:bg-gray-50">
             <FiFilter className="text-gray-500" /> Filter
           </button>
           <button className="flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm text-gray-700 hover:bg-gray-50">
             <FiDownload className="text-gray-500" /> Export
-          </button>
+          </button> */}
         </div>
       </div>
 
