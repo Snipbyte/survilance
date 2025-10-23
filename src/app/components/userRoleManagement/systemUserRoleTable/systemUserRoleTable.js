@@ -207,6 +207,7 @@ const SystemUserRolesTable = () => {
           message: "User role updated successfully.",
         });
       }
+      
       setIsFormModalOpen(false);
       fetchRoles();
     } catch (error) {
