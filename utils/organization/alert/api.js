@@ -12,3 +12,12 @@ export const getAlerts = async (modelType, page = 1, limit = 10, macAddress = ""
     throw error.response?.data?.message || "An error occurred while fetching alerts.";
   }
 };
+
+export const getAlertHistoryStats = async (modelType = "PPE") => {
+  try {
+    const response = await axios.get(`/api/alertHistoryStats?modelType=${modelType}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || "An error occurred while fetching alert history stats.";
+  }
+};

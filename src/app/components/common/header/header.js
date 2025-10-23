@@ -60,7 +60,7 @@ const Header = ({ variant = "default" }) => {
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="flex items-center space-x-2 mb-2 md:mb-0">
                 <h1 className="text-lg md:text-2xl font-bold text-blue-900">Port Surveillance</h1>
-                <span className="text-sm text-gray-600">Singapore Maritime Port | Dec 15, 2024</span>
+               
               </div>
               <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
                 <div className="flex space-x-2 mb-2 md:mb-0">
@@ -116,7 +116,7 @@ const Header = ({ variant = "default" }) => {
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="flex items-center space-x-2 mb-2 md:mb-0">
                 <h1 className="text-lg md:text-2xl font-bold text-blue-900">Port Surveillance</h1>
-                <span className="text-xs text-gray-600">Singapore Maritime Port - Dec 15, 2025</span>
+                
               </div>
               <div className="flex items-center space-x-3">
                 <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 flex items-center gap-1 duration-300 mb-2 md:mb-0">
@@ -151,7 +151,7 @@ const Header = ({ variant = "default" }) => {
           <div className="bg-white p-3 border-b border-gray-200 flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-2 mb-2 md:mb-0">
               <h1 className="text-lg md:text-2xl font-bold text-blue-900">Port Surveillance</h1>
-              <span className="text-xs text-gray-600">Singapore Maritime Port - Dec 15, 2025</span>
+              
             </div>
             <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
               <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 flex items-center gap-1 duration-300 text-sm mb-2 md:mb-0">
@@ -197,7 +197,7 @@ const Header = ({ variant = "default" }) => {
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="flex items-center space-x-2 mb-2 md:mb-0">
                 <h1 className="text-lg md:text-2xl font-bold text-blue-900">Port Surveillance</h1>
-                <span className="text-sm text-gray-600">Singapore Maritime Port | Dec 15, 2024</span>
+               
               </div>
               <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
                 <div className="flex space-x-2 mb-2 md:mb-0">

@@ -1,11 +1,57 @@
-import React from "react";
-import { FiCalendar, FiFileText } from "react-icons/fi";
+"use client";
+import React, { useState, useEffect } from "react";
 import Button from "../../common/button/button";
-import { FaChartBar } from "react-icons/fa";
 import { FaRegChartBar } from "react-icons/fa6";
 import Input from "../../common/input/input";
+import { ALERT_TYPE_MAP } from "../../../../../lib/alertTypes";
+import { getZones } from "../../../../../utils/organization/zone/api";
+import { getCameras } from "../../../../../utils/organization/camera/api";
 
-const ReportBuilderSection = () => {
+const ReportBuilderSection = ({ onGenerateReport }) => {
+  const [zones, setZones] = useState([]);
+  const [cameras, setCameras] = useState([]);
+  const [selectedZones, setSelectedZones] = useState([]);
+  const [selectedCameras, setSelectedCameras] = useState([]);
+  const [selectedPPEs, setSelectedPPEs] = useState([]);
+  const [dateFrom, setDateFrom] = useState("2025-10-01");
+  const [dateTo, setDateTo] = useState("2025-10-23");
+  const [groupBy, setGroupBy] = useState("Zone");
+  const [reportType, setReportType] = useState("Summary");
+  const [compareMode, setCompareMode] = useState("This week vs. Last week");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const zonesData = await getZones(1, 100);
+        const camerasData = await getCameras(1, 100);
+        setZones(zonesData.zonesData || []);
+        setCameras(camerasData.devicesData || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleGenerateReportClick = () => {
+    onGenerateReport({
+      dateFrom,
+      dateTo,
+      selectedZones,
+      selectedCameras,
+      selectedPPEs,
+      groupBy,
+      reportType,
+      compareMode,
+    });
+  };
+
+  const ppeOptions = Object.values(ALERT_TYPE_MAP)
+
   return (
     <div className="bg-white rounded-lg border p-4 my-6 w-full">
       <h2 className="text-lg font-semibold mb-6">Report Builder</h2>
@@ -17,19 +63,21 @@ const ReportBuilderSection = () => {
             <div className="relative w-full">
               <Input
                 type="date"
-                className="border rounded-md w-full px-3 -mb-0 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                defaultValue="2024-12-08"
+                className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
               />
-              <FiCalendar className="absolute right-3 top-2.5 text-gray-400" />
+             
             </div>
             <span className="text-gray-500 text-sm">to</span>
             <div className="relative w-full">
               <Input
                 type="date"
-                className="border rounded-md w-full px-3 -mb-0 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                defaultValue="2024-12-15"
+                className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
               />
-              <FiCalendar className="absolute right-3 top-2.5 text-gray-400" />
+             
             </div>
           </div>
         </div>
@@ -39,89 +87,101 @@ const ReportBuilderSection = () => {
           <select
             multiple
             className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-[80px]"
+            value={selectedZones.map(z => z._id)}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map(option =>
+                zones.find(z => z._id === option.value)
+              );
+              setSelectedZones(selected);
+            }}
           >
-            <option>Terminal A</option>
-            <option>Terminal B</option>
-            <option>Gate Area</option>
-            <option>Yard 1</option>
+            {zones.map(zone => (
+              <option key={zone._id} value={zone._id}>
+                {zone.zoneName} ({zone.zoneCode})
+              </option>
+            ))}
           </select>
         </div>
 
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-paraColor mb-1">Shifts</label>
-          <div className="flex flex-col gap-2 border rounded-md p-2">
-            <label className="flex items-center text-sm text-paraColor">
-              <input type="checkbox" defaultChecked className="mr-2 accent-blue-500" /> Day Shift (06:00–18:00)
-            </label>
-            <label className="flex items-center text-sm text-paraColor">
-              <input type="checkbox" defaultChecked className="mr-2 accent-blue-500" /> Night Shift (18:00–06:00)
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-6 mb-6">
         <div className="flex-1">
           <label className="block text-sm font-medium text-paraColor mb-1">Cameras</label>
           <select
             multiple
             className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-[80px]"
+            value={selectedCameras.map(c => c.deviceMAC)}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map(option =>
+                cameras.find(c => c.deviceMAC === option.value)
+              );
+              setSelectedCameras(selected);
+            }}
           >
-            <option>CAM-001 (Terminal A)</option>
-            <option>CAM-002 (Terminal B)</option>
-            <option>CAM-003 (Gate)</option>
-            <option>CAM-004 (Yard 1)</option>
+            {cameras.map(camera => (
+              <option key={camera.deviceMAC} value={camera.deviceMAC}>
+                {camera.deviceName} ({camera.deviceMAC})
+              </option>
+            ))}
           </select>
         </div>
+      </div>
 
+      <div className="flex flex-col md:flex-row gap-6 mb-6">
         <div className="flex-1">
           <label className="block text-sm font-medium text-paraColor mb-1">PPE Types</label>
           <div className="flex flex-col gap-2 border rounded-md p-2">
-            <label className="flex items-center text-sm text-paraColor">
-              <input type="checkbox" defaultChecked className="mr-2 accent-blue-500" /> Safety Vest
-            </label>
-            <label className="flex items-center text-sm text-paraColor">
-              <input type="checkbox" defaultChecked className="mr-2 accent-blue-500" /> Helmet
-            </label>
-            <label className="flex items-center text-sm text-paraColor">
-              <input type="checkbox" defaultChecked className="mr-2 accent-blue-500" /> Gloves
-            </label>
-            <label className="flex items-center text-sm text-paraColor">
-              <input type="checkbox" className="mr-2 accent-blue-500" /> Safety Glasses
-            </label>
+            {ppeOptions.map(ppe => (
+              <label key={ppe} className="flex items-center text-sm text-paraColor">
+                <input
+                  type="checkbox"
+                  className="mr-2 accent-blue-500"
+                  checked={selectedPPEs.includes(ppe)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedPPEs([...selectedPPEs, ppe]);
+                    } else {
+                      setSelectedPPEs(selectedPPEs.filter(p => p !== ppe));
+                    }
+                  }}
+                />
+                {ppe.replace("-", " ").toUpperCase()}
+              </label>
+            ))}
           </div>
         </div>
 
         <div className="flex-1">
           <label className="block text-sm font-medium text-paraColor mb-1">Group By</label>
-          <select className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <select
+            className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value)}
+          >
             <option>Zone</option>
-            <option>Shift</option>
             <option>Camera</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row items-end gap-6">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-paraColor mb-1">Compare Mode</label>
-          <select className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <option>This week vs. Last week</option>
-            <option>This month vs. Last month</option>
-            <option>Custom</option>
           </select>
         </div>
 
         <div className="flex-1">
           <label className="block text-sm font-medium text-paraColor mb-1">Report Type</label>
-          <select className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <select
+            className="border rounded-md w-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={reportType}
+            onChange={(e) => setReportType(e.target.value)}
+          >
             <option>Summary</option>
             <option>Detailed</option>
           </select>
         </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-end gap-6">
+     
 
         <div className="flex justify-end w-full md:w-auto">
-          <Button className="text-white font-medium text-sm px-5 py-2.5 rounded-md flex items-center gap-2 mt-5 md:mt-0">
+          <Button
+            className="text-white font-medium text-sm px-5 py-2.5 rounded-md flex items-center gap-2 mt-5 md:mt-0 bg-blue-600 hover:bg-blue-700"
+            onClick={handleGenerateReportClick}
+          >
             <FaRegChartBar className="mr-2" />Generate Report
           </Button>
         </div>

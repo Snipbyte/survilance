@@ -1,24 +1,115 @@
-"use client";
-import React, { useState } from "react";
+"use client"
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { getAlerts } from "../../../../../utils/organization/alert/api";
+import { getZones } from "../../../../../utils/organization/zone/api";
+import { getCameras } from "../../../../../utils/organization/camera/api";
+import { ALERT_TYPE_MAP } from "../../../../../lib/alertTypes";
 
-// Dynamically import react-apexcharts (disable SSR)
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-const ColumnsChart = ({ isDashboard = true }) => {
+const ColumnsChart = ({ isDashboard = true, stats, loading, filters }) => {
   const [activeFilter, setActiveFilter] = useState("Zone");
-  const [activeChart, setActiveChart] = useState("bar");
+  const [internalStats, setInternalStats] = useState({ alertTypes: [], zoneViolationsByType: [] });
+  const [internalLoading, setInternalLoading] = useState(false);
 
-  // ✅ Common base options
+  useEffect(() => {
+    if (!isDashboard) {
+      const fetchData = async () => {
+        setInternalLoading(true);
+        try {
+          const { dateFrom, dateTo, selectedZones, selectedCameras, selectedPPEs, groupBy } = filters || {};
+          const macAddresses = selectedCameras?.length > 0
+            ? selectedCameras.map(c => c.deviceMAC).join(",")
+            : "";
+          const alertsData = await getAlerts("PPE", 1, 100, macAddresses, dateFrom, dateTo);
+          const zonesData = await getZones(1, 100);
+          const camerasData = await getCameras(1, 100);
+
+          const filteredZones = selectedZones?.length > 0
+            ? zonesData.zonesData.filter(z => selectedZones.some(sz => sz._id === z._id))
+            : zonesData.zonesData;
+
+          const processedStats = processAlertData(
+            alertsData.AlarmHistoryData || [],
+            filteredZones || [],
+            camerasData.devicesData || [],
+            selectedPPEs || [],
+            groupBy || "Zone"
+          );
+
+          setInternalStats(processedStats);
+        } catch (error) {
+          console.error("Error fetching data:", error);
+        } finally {
+          setInternalLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [isDashboard, filters]);
+
+  const processAlertData = (alerts, zones, cameras, selectedPPEs, groupBy) => {
+    const alertTypes = selectedPPEs.length > 0
+      ? selectedPPEs.filter(type => Object.values(ALERT_TYPE_MAP).includes(type))
+      : Object.values(ALERT_TYPE_MAP);
+    const violations = {};
+
+    alerts.forEach(alert => {
+      const { macAddress, alertTypeCounts } = alert;
+      const zone = zones.find(z => z.installedDevices.includes(macAddress)) || { zoneName: "Unknown", _id: "unknown" };
+      const camera = cameras.find(c => c.deviceMAC === macAddress) || { deviceName: "Unknown", deviceMAC: macAddress };
+
+      const key = groupBy === "Zone" ? zone._id : macAddress;
+      const name = groupBy === "Zone" ? zone.zoneName : camera.deviceName;
+
+      if (!violations[key]) {
+        violations[key] = {
+          name,
+          macAddress,
+          violations: Array(alertTypes.length).fill(0),
+        };
+      }
+
+      Object.values(alertTypeCounts).forEach(types => {
+        alertTypes.forEach((type, index) => {
+          const typeId = Object.entries(ALERT_TYPE_MAP).find(([id, name]) => name === type)?.[0];
+          if (types[typeId]) {
+            violations[key].violations[index]++;
+          }
+        });
+      });
+    });
+
+    return {
+      alertTypes,
+      zoneViolationsByType: Object.values(violations),
+    };
+  };
+
+  const series = isDashboard && stats?.alertTypes
+    ? stats.alertTypes.map(type => ({
+        name: `${type.replace("-", " ").toUpperCase()} Compliance `,
+        data: (stats.zoneViolationsByType || []).map(zone => zone.violations[stats.alertTypes.indexOf(type)] || 0),
+      }))
+    : internalStats.alertTypes.map((type, index) => ({
+        name: `${type.replace("-", " ").toUpperCase()} Compliance`,
+        data: internalStats.zoneViolationsByType.map(zone => zone.violations[index] || 0),
+      }));
+
+  const categories = isDashboard
+    ? (stats?.zoneViolationsByType || []).map(zone => zone.macAddress)
+    : internalStats.zoneViolationsByType.map(zone => zone.name);
+
   const baseOptions = {
     chart: {
-      type: activeChart,
+      type: "bar",
       toolbar: { show: false },
     },
     dataLabels: { enabled: false },
     stroke: { show: true, width: 2, colors: ["transparent"] },
     tooltip: {
-      y: { formatter: (val) => val + "%" },
+      y: { formatter: (val) => `${val} Compliance ` },
     },
     legend: {
       position: "bottom",
@@ -26,15 +117,8 @@ const ColumnsChart = ({ isDashboard = true }) => {
     },
   };
 
-  // ✅ Data for both charts
-  const series = [
-    { name: "Safety Vest", data: [72, 70, 80, 78, 74] },
-    { name: "Helmet", data: [68, 63, 77, 75, 72] },
-    { name: "Gloves", data: [65, 57, 70, 71, 69] },
-  ];
-
-  // ✅ Original Dashboard Chart Design (from your code)
   const dashboardOptions = {
+    ...baseOptions,
     chart: {
       type: "bar",
       height: 350,
@@ -47,140 +131,56 @@ const ColumnsChart = ({ isDashboard = true }) => {
         borderRadiusApplication: "end",
       },
     },
-    dataLabels: { enabled: false },
-    stroke: { show: true, width: 2, colors: ["transparent"] },
     xaxis: {
-      categories: [
-        "Loading Dock A",
-        "Loading Dock B",
-        "Crane Area 1",
-        "Crane Area 2",
-        "Crane Area 3",
-        "Storage Bay 1",
-        "Storage Bay 2",
-        "Storage Bay 3",
-        "Maintenance",
-        "Office Area",
-      ],
-    },
-    yaxis: {
-      title: {
-        text: "Non-compliance Count",
-        style: { fontSize: "10px", color: "#9CA3AF" },
-      },
-    },
-    fill: { opacity: 1 },
-    colors: ["#1E90FF", "#FF4500", "#FFA500", "#32CD32"],
-    tooltip: {
-      y: { formatter: (val) => val + " violations" },
-    },
-    legend: { position: "bottom", markers: { shape: "circle" } },
-    series: [
-      { name: "Helmet Violations", data: [50, 30, 20, 40, 50, 20, 30, 10, 5, 10] },
-      { name: "Vest Violations", data: [60, 40, 30, 45, 55, 25, 40, 15, 10, 5] },
-      { name: "Gloves Violations", data: [20, 25, 15, 30, 35, 15, 20, 10, 5, 5] },
-      { name: "Glasses Violations", data: [30, 20, 10, 25, 30, 10, 15, 5, 2, 2] },
-    ],
-  };
-
-  // ✅ Visualization Chart (when isDashboard === false)
-  const visualizationOptions = {
-    ...baseOptions,
-    xaxis: {
-      categories: ["Terminal A", "Terminal B", "Yard 1", "Gate Area", "Crane 1"],
+      categories,
       labels: { style: { colors: "#6B7280", fontSize: "12px" } },
     },
     yaxis: {
-      title: { text: "Compliance Rate (%)", style: { color: "#6B7280", fontSize: "12px" } },
+      title: { text: "Non-compliance Count", style: { fontSize: "10px", color: "#9CA3AF" } },
       min: 0,
-      max: 100,
+      max: Math.max(20, ...series.flatMap(s => s.data)),
     },
-    colors: ["#2563EB", "#F59E0B", "#10B981"], // blue, orange, green
-    plotOptions: {
-      bar: { horizontal: false, columnWidth: "45%", borderRadius: 2 },
-    },
-    grid: { borderColor: "#E5E7EB" },
+    fill: { opacity: 1 },
+    colors: [
+      "#1E90FF", "#FF4500", "#FFA500", "#32CD32", "#8B008B", 
+      "#00CED1", "#FF69B4", "#228B22", "#FFD700", "#DC143C", 
+      "#00FF7F", "#9932CC", "#20B2AA", "#FF6347", "#4682B4", 
+      "#9ACD32", "#BA55D3"
+    ], // Expanded color array to handle all alert types
   };
 
-  // ✅ Conditional Rendering
   return (
-    <>
-      {isDashboard ? (
-        // ---- Dashboard Mode ----
-        <div className="p-4 bg-white rounded-lg border my-6">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-headingColor text-2xl font-bold">
-              Non-compliance by Zone
-            </h3>
-            <div className="flex space-x-2">
-              <button
-                className={`px-2 py-1 text-sm rounded ${
-                  activeFilter === "Zone"
-                    ? "bg-blue-100 text-blue-600"
-                    : "bg-gray-100 text-paraColor"
-                }`}
-                onClick={() => setActiveFilter("Zone")}
-              >
-                Zone
-              </button>
-              <button
-                className={`px-2 py-1 text-sm rounded ${
-                  activeFilter === "Shift"
-                    ? "bg-blue-100 text-blue-600"
-                    : "bg-gray-100 text-paraColor"
-                }`}
-                onClick={() => setActiveFilter("Shift")}
-              >
-                Shift
-              </button>
-            </div>
-          </div>
-          <div className="w-full">
-            <Chart
-              options={dashboardOptions}
-              series={dashboardOptions.series}
-              type="bar"
-              height={350}
-            />
-          </div>
+    <div className="p-4 bg-white rounded-lg border my-6">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-headingColor text-2xl font-bold">
+          Compliance by {filters?.groupBy || "Zone"}
+        </h3>
+        <div className="flex space-x-2">
+          <button
+            className={`px-2 py-1 text-sm rounded ${
+              activeFilter === "Zone" ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-paraColor"
+            }`}
+            onClick={() => setActiveFilter("Zone")}
+          >
+            Zone
+          </button>
         </div>
+      </div>
+      {(isDashboard ? loading : internalLoading) ? (
+        <div className="text-center text-gray-600">Loading...</div>
+      ) : !series.length ? (
+        <div className="text-center text-gray-600">No data available</div>
       ) : (
-        // ---- Visualization Mode ----
-        <div className="bg-white border rounded-xl p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-gray-800 font-semibold text-base">
-              Compliance Visualization
-            </h3>
-
-            {/* Buttons now same like Zone/Shift (no functionality) */}
-            <div className="flex space-x-2">
-              {["bar", "line", "pie"].map((type) => (
-                <button
-                  key={type}
-                  className={`px-2 py-1 text-sm rounded capitalize ${
-                    activeChart === type
-                      ? "bg-blue-100 text-blue-600"
-                      : "bg-gray-100 text-paraColor"
-                  }`}
-                  onClick={() => setActiveChart(type)}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="w-full">
-            <Chart
-              options={visualizationOptions}
-              series={series}
-              type="bar"
-              height={480}
-            />
-          </div>
+        <div className="w-full">
+          <Chart
+            options={dashboardOptions}
+            series={series}
+            type="bar"
+            height={350}
+          />
         </div>
       )}
-    </>
+    </div>
   );
 };
 

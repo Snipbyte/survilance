@@ -6,40 +6,100 @@ import { HiOutlineViewfinderCircle } from "react-icons/hi2";
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const SplineChart = ({
+  stats,
   isDashboard = true,
-  title = "Hourly Violations Timeline",
+  title = "Hourly Compliance Timeline",
   categories = [
-    "06:00",
-    "08:00",
-    "10:00",
-    "12:00",
-    "14:00",
-    "16:00",
-    "18:00",
-    "20:00",
-    "22:00",
+    "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"
   ],
   yTitle = "Violation Rate (%)",
-  seriesData = [
-    {
-      name: "Helmet",
-      data: [14, 17, 21, 28, 25, 22, 18, 15, 12],
-    },
-    {
-      name: "Vest",
-      data: [12, 14, 18, 25, 23, 20, 17, 14, 10],
-    },
-    {
-      name: "Gloves",
-      data: [10, 12, 16, 22, 20, 16, 13, 10, 8],
-    },
-    {
-      name: "Glasses",
-      data: [8, 10, 13, 19, 17, 14, 11, 9, 7],
-    },
-  ],
 }) => {
-  // shared chart styling
+  // Process real data from stats prop
+  const processHourlyViolationsData = () => {
+    if (!stats?.hourlyViolationsByType?.length) {
+      return [];
+    }
+
+    // Extract PPE types from alertTypes
+    const ppeTypes = stats.alertTypes || [];
+    
+    return ppeTypes.map((ppeType, index) => {
+      const data = stats.hourlyViolationsByType.map(hourData => {
+        const hourIndex = ppeTypes.indexOf(ppeType);
+        return hourIndex >= 0 && hourData.data && hourData.data[hourIndex] 
+          ? hourData.data[hourIndex] 
+          : 0;
+      });
+
+      return {
+        name: formatPPEName(ppeType),
+        data: data,
+      };
+    });
+  };
+
+  // Process violation trends data
+  const processViolationTrendsData = () => {
+    if (!stats?.violationsTrend?.length) {
+      return [];
+    }
+
+    // Group by PPE type (simplified - you might need more complex logic based on your actual data structure)
+    const ppeTypes = stats.mostViolatedPPE || [];
+    
+    return ppeTypes.map(ppeType => {
+      const data = stats.violationsTrend.map(day => {
+        // This is a simplified mapping - adjust based on your actual data structure
+        // You might need to access day[ppeType] or similar based on how your data is structured
+        return day.violations || 0;
+      });
+
+      return {
+        name: `${formatPPEName(ppeType)} Violations`,
+        data: data,
+      };
+    });
+  };
+
+  // Format PPE names for display
+  const formatPPEName = (ppeType) => {
+    const nameMap = {
+      "ear": "Ear Protection",
+      "ear-mufs": "Ear Muffs", 
+      "face": "Face Shield",
+      "face-guard": "Face Guard",
+      "foot": "Safety Shoes",
+      "hand": "Gloves",
+      "head": "Helmet",
+      "vest": "Safety Vest"
+    };
+    
+    return nameMap[ppeType] || ppeType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Get categories for dashboard (time-based)
+  const getDashboardCategories = () => {
+    if (stats?.hourlyViolationsByType?.length) {
+      return stats.hourlyViolationsByType.map(hourData => {
+        const hour = parseInt(hourData.name);
+        return `${hour.toString().padStart(2, '0')}:00`;
+      });
+    }
+    return categories;
+  };
+
+  // Get categories for trends (date-based)
+  const getTrendsCategories = () => {
+    if (stats?.violationsTrend?.length) {
+      return stats.violationsTrend.map(day => {
+        const date = new Date(day.date);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      });
+    }
+    return ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6"];
+  };
+
+  // Shared chart styling
   const baseOptions = {
     chart: {
       type: "line",
@@ -63,7 +123,6 @@ const SplineChart = ({
     dataLabels: { enabled: false },
     tooltip: { theme: "light" },
     xaxis: {
-      categories,
       labels: {
         style: { colors: "#9CA3AF", fontSize: "12px" },
       },
@@ -81,10 +140,16 @@ const SplineChart = ({
     },
   };
 
-  // --- dashboard design ---
+  // Process real data
+  const realDashboardSeries = processHourlyViolationsData();
+  const realTrendsSeries = processViolationTrendsData();
+  const dashboardCategories = getDashboardCategories();
+  const trendsCategories = getTrendsCategories();
+
+  // --- Dashboard design ---
   const dashboardOptions = {
     ...baseOptions,
-    colors: ["#FACC15", "#F43F5E", "#3B82F6", "#10B981"], // yellow, red, blue, green
+    colors: ["#FACC15", "#F43F5E", "#3B82F6", "#10B981", "#8B5CF6", "#06B6D4", "#EF4444"], // Multiple colors for different PPE types
     legend: {
       position: "bottom",
       horizontalAlign: "center",
@@ -92,46 +157,36 @@ const SplineChart = ({
       labels: { colors: "#6B7280" },
       markers: { width: 12, height: 12, radius: 0 },
       itemMargin: { horizontal: 10, vertical: 5 },
+    },
+    xaxis: {
+      ...baseOptions.xaxis,
+      categories: dashboardCategories,
     },
     yaxis: {
       ...baseOptions.yaxis,
       min: 0,
-      max: 30,
       tickAmount: 6,
     },
   };
 
-  const dashboardSeries = [
-    {
-      name: "Helmet",
-      data: seriesData[0].data,
-      color: "#FACC15",
-      marker: { shape: "square" },
+  const dashboardSeries = realDashboardSeries.length > 0 ? realDashboardSeries.map((series, index) => ({
+    ...series,
+    color: ["#FACC15", "#F43F5E", "#3B82F6", "#10B981", "#8B5CF6", "#06B6D4", "#EF4444"][index % 7],
+    marker: { 
+      shape: ["square", "circle", "triangle", "diamond"][index % 4] 
     },
+  })) : [
     {
-      name: "Vest",
-      data: seriesData[1].data,
-      color: "#F43F5E",
-      marker: { shape: "square" },
-    },
-    {
-      name: "Gloves",
-      data: seriesData[2].data,
-      color: "#3B82F6",
-      marker: { shape: "circle" },
-    },
-    {
-      name: "Glasses",
-      data: seriesData[3].data,
-      color: "#10B981",
-      marker: { shape: "triangle" },
-    },
+      name: "No Data",
+      data: dashboardCategories.map(() => 0),
+      color: "#9CA3AF",
+    }
   ];
 
-  // --- non-dashboard (Violation Trends) design ---
+  // --- Non-dashboard (Violation Trends) design ---
   const trendsOptions = {
     ...baseOptions,
-    colors: ["#F43F5E", "#3B82F6", "#FACC15", "#10B981"], // Vest, Helmet, Gloves, Other PPE
+    colors: ["#F43F5E", "#3B82F6", "#FACC15", "#10B981", "#8B5CF6"],
     legend: {
       position: "bottom",
       horizontalAlign: "center",
@@ -139,6 +194,10 @@ const SplineChart = ({
       labels: { colors: "#6B7280" },
       markers: { width: 12, height: 12, radius: 0 },
       itemMargin: { horizontal: 10, vertical: 5 },
+    },
+    xaxis: {
+      ...baseOptions.xaxis,
+      categories: trendsCategories,
     },
     yaxis: {
       ...baseOptions.yaxis,
@@ -146,46 +205,31 @@ const SplineChart = ({
         text: "Violation Count",
         style: { fontSize: "12px", color: "#9CA3AF" },
       },
-      min: 50,
-      max: 200,
+      min: 0,
       tickAmount: 5,
-    },
-    xaxis: {
-      categories: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6"],
-      labels: {
-        style: { colors: "#9CA3AF", fontSize: "12px" },
-      },
     },
   };
 
-  const trendsSeries = [
+  const trendsSeries = realTrendsSeries.length > 0 ? realTrendsSeries : [
     {
-      name: "Vest Violations",
-      data: [120, 130, 135, 125, 150, 140],
-      marker: { shape: "square" },
-    },
-    {
-      name: "Helmet Violations",
-      data: [100, 110, 115, 100, 125, 120],
-      marker: { shape: "circle" },
-    },
-    {
-      name: "Gloves Violations",
-      data: [150, 160, 155, 145, 180, 165],
-      marker: { shape: "triangle" },
-    },
-    {
-      name: "Other PPE",
-      data: [70, 80, 85, 75, 90, 85],
-      marker: { shape: "square" },
-    },
+      name: "No Data Available",
+      data: trendsCategories.map(() => 0),
+      color: "#9CA3AF",
+    }
   ];
+
+  console.log('Processed stats data:', {
+    dashboardSeries: realDashboardSeries,
+    trendsSeries: realTrendsSeries,
+    dashboardCategories,
+    trendsCategories
+  });
 
   return (
     <div className="bg-white rounded-lg p-4 border">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-headingColor font-bold text-base">
-          {isDashboard ? "Hourly Violations Timeline" : "Violation Trends"}
+          {isDashboard ? "Hourly Compliance Timeline" : "Compliance Trends"}
         </h2>
         <HiOutlineViewfinderCircle className="text-paraColor text-lg" />
       </div>
@@ -196,6 +240,13 @@ const SplineChart = ({
         type="line"
         height={350}
       />
+      
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-2 text-xs text-gray-500">
+          Data points: {isDashboard ? dashboardSeries[0]?.data?.length : trendsSeries[0]?.data?.length}
+        </div>
+      )}
     </div>
   );
 };
