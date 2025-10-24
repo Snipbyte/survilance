@@ -31,7 +31,7 @@ const organizationUserSchema = new mongoose.Schema(
         },
         isUserVerified: {
             type: Boolean,
-            default: false,
+            default: true,
         },
         userStatus: {
             type: String, // e.g., active, inactive, suspended

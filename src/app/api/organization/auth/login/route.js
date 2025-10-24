@@ -50,10 +50,9 @@ export async function POST(request) {
     if (!isMatch) {
       return NextResponse.json({ error: "Invalid email/user ID or password." }, { status: 401 });
     }
-
-    if (user.userStatus !== "active") {
-      return NextResponse.json({ error: `User account is ${user.userStatus}.` }, { status: 403 });
-    }
+if (user.userStatus.toLowerCase() !== "active") {
+  return NextResponse.json({ error: `User account is ${user.userStatus}.` }, { status: 403 });
+}
 
     if (!user.isUserVerified) {
       return NextResponse.json({ error: "User email is not verified." }, { status: 403 });

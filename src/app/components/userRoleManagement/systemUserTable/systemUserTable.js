@@ -29,7 +29,7 @@ const SystemUserTable = () => {
       userEmail: "",
       userPassword: "",
       userRole: "",
-      userStatus: "Active",
+      userStatus: "active",
     
     }
   });
@@ -42,7 +42,7 @@ const SystemUserTable = () => {
   };
 
   const statusStyles = {
-    Active: "bg-green-200 text-green-800",
+    active: "bg-green-200 text-green-800",
     Suspended: "bg-yellow-200 text-yellow-800",
   };
 
