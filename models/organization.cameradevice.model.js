@@ -37,7 +37,7 @@ const organizationCameraDeviceSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true,
+     
     },
     deviceMAC: {
       type: String,
