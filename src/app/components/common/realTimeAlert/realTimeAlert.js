@@ -11,9 +11,13 @@ const RealTimeAlert = () => {
   const [isLoading, setIsLoading] = useState(true);
   const previousAlertId = useRef(null);
 
-  // Function to convert UTC to local time
-  const convertToLocalTime = (utcDate) => {
-    const date = new Date(utcDate);
+  // Function to convert ISO to local time
+  const convertToLocalTime = (isoDate) => {
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) {
+      console.error('Invalid ISO date:', isoDate);
+      return 'Invalid Date';
+    }
     return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -54,19 +58,21 @@ const RealTimeAlert = () => {
 
       if (!latestAlert) {
         console.log('No latest alert found, skipping display');
-        return; // Skip showing any alert
+        return;
       }
 
       if (latestAlert._id !== previousAlertId.current) {
         console.log('New alert detected, updating queue');
         previousAlertId.current = latestAlert._id;
         const personAlerts = getMissingPPE(latestAlert);
-        setAlertQueue(personAlerts.map((alert) => ({
-          ...alert,
-          localTime: convertToLocalTime(latestAlert.recordedAt),
-          macAddress: latestAlert.macAddress,
-          type: 'actual-alert',
-        })));
+        setAlertQueue(
+          personAlerts.map((alert) => ({
+            ...alert,
+            localTime: convertToLocalTime(latestAlert.recordedAt),
+            macAddress: latestAlert.macAddress,
+            type: 'actual-alert',
+          }))
+        );
         setAlerts((prev) => {
           const newAlerts = [latestAlert, ...prev].slice(0, 5);
           console.log('Updated alerts:', newAlerts);
@@ -74,7 +80,7 @@ const RealTimeAlert = () => {
         });
       } else {
         console.log('Same alert, skipping display');
-        return; // Skip showing any alert
+        return;
       }
     } catch (error) {
       console.error('Error fetching alerts:', error);
@@ -82,7 +88,7 @@ const RealTimeAlert = () => {
         setIsExiting(false);
         setCurrentAlert({
           message: 'Error fetching alerts',
-          localTime: convertToLocalTime(new Date()),
+          localTime: convertToLocalTime(new Date().toISOString()),
           macAddress: 'N/A',
           type: 'error',
           hasMissing: false,
@@ -125,7 +131,7 @@ const RealTimeAlert = () => {
           setCurrentAlert(null);
           console.log('currentAlert cleared');
         }, 500); // Match exit animation duration
-      }, currentAlert.type === 'actual-alert' ? 10000 : 5000); // 10s for actual alerts, 5s for error messages
+      }, currentAlert.type === 'actual-alert' ? 10000 : 5000);
       return () => clearTimeout(timeout);
     }
   }, [currentAlert]);
