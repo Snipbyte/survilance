@@ -33,9 +33,6 @@ const RealTimeAlert = () => {
       const missingPPE = allPPE
         .filter((key) => !detectedPPE.includes(key))
         .map((key) => ALERT_TYPE_MAP[key] || `Unknown (${key})`);
-      if (missingPPE.length > 3) {
-        missingPPE.splice(3, missingPPE.length, '...');
-      }
       return {
         personId,
         message: missingPPE.length > 0
@@ -56,17 +53,8 @@ const RealTimeAlert = () => {
       console.log('Fetched latest alert:', latestAlert?._id, 'Previous alert:', previousAlertId.current);
 
       if (!latestAlert) {
-        console.log('No latest alert found');
-        if (!previousAlertId.current && currentAlert?.message !== 'No alerts found') {
-          setIsExiting(false);
-          setCurrentAlert({
-            message: 'No alerts found',
-            localTime: convertToLocalTime(new Date()),
-            macAddress: 'N/A',
-            type: 'no-alerts',
-          });
-        }
-        return;
+        console.log('No latest alert found, skipping display');
+        return; // Skip showing any alert
       }
 
       if (latestAlert._id !== previousAlertId.current) {
@@ -85,27 +73,19 @@ const RealTimeAlert = () => {
           return newAlerts;
         });
       } else {
-        console.log('Same alert, setting "No new alerts"');
-        if (currentAlert?.message !== 'No new alerts') {
-          setIsExiting(false);
-          setCurrentAlert({
-            message: 'No new alerts',
-            localTime: convertToLocalTime(new Date()),
-            macAddress: latestAlert.macAddress,
-            type: 'no-new-alerts',
-          });
-          setAlertQueue([]); // Clear queue to avoid re-showing old alerts
-        }
+        console.log('Same alert, skipping display');
+        return; // Skip showing any alert
       }
     } catch (error) {
       console.error('Error fetching alerts:', error);
-      if (currentAlert?.message !== 'Error fetching alerts') {
+      if (!currentAlert) {
         setIsExiting(false);
         setCurrentAlert({
           message: 'Error fetching alerts',
           localTime: convertToLocalTime(new Date()),
           macAddress: 'N/A',
           type: 'error',
+          hasMissing: false,
         });
         setAlertQueue([]);
       }
@@ -145,7 +125,7 @@ const RealTimeAlert = () => {
           setCurrentAlert(null);
           console.log('currentAlert cleared');
         }, 500); // Match exit animation duration
-      }, currentAlert.type === 'actual-alert' ? 10000 : 5000); // 10s for actual alerts, 5s for status messages
+      }, currentAlert.type === 'actual-alert' ? 10000 : 5000); // 10s for actual alerts, 5s for error messages
       return () => clearTimeout(timeout);
     }
   }, [currentAlert]);
@@ -182,8 +162,7 @@ const RealTimeAlert = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-base font-bold text-headingColor flex items-center">
-                  {currentAlert.type === 'actual-alert' ? 'PPE Compliance' : 
-                   currentAlert.type === 'error' ? 'System Alert' : 'Alert Status'}
+                  {currentAlert.type === 'actual-alert' ? 'PPE Compliance' : 'System Alert'}
                   {currentAlert.hasMissing && (
                     <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded-full animate-pulse">
                       URGENT
@@ -222,7 +201,7 @@ const RealTimeAlert = () => {
                 </div>
               )}
               <p
-                className={`text-sm font-medium p-2 rounded-lg ${
+                className={`text-sm font-medium p-2 rounded-lg whitespace-normal break-words ${
                   currentAlert.hasMissing
                     ? 'text-red-600 bg-red-50 border border-red-100'
                     : currentAlert.type === 'error'
