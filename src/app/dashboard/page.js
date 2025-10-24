@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import DashboardMainPage from '../components/dashboard/dashboardMainPage/dashboardMainPage';
+import RealTimeAlert from '../components/common/realTimeAlert/realTimeAlert';
 import LoadingSkeleton from '../components/common/skeletonLoading/skeletonLoading';
 
 const Dashboard = () => {
@@ -20,12 +21,13 @@ const Dashboard = () => {
   }, [router]);
 
   if (isLoading) {
-    return <div><LoadingSkeleton numberOfCards={3} /></div>; 
+    return <div><LoadingSkeleton numberOfCards={3} /></div>;
   }
 
   return (
     <div>
       <DashboardMainPage />
+      <RealTimeAlert />
     </div>
   );
 };

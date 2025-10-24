@@ -81,10 +81,8 @@ const Header = ({ variant = "default" }) => {
                   placeholder="Search..."
                   className="border border-gray-300 rounded px-3 py-1 text-sm w-full md:w-48 outline-none mb-2 md:mb-0"
                 />
-                <button className="bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700 duration-300 flex items-center justify-center gap-1 w-full md:w-auto">
-                  <MdMenu />Menu
-                </button>
-                <FaBell className="text-gray-600 cursor-pointer w-6 h-6 md:w-auto md:h-auto" />
+                
+              
                 <div className="relative">
                   <div
                     className="w-6 h-6 bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer"
@@ -122,7 +120,7 @@ const Header = ({ variant = "default" }) => {
                 <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 flex items-center gap-1 duration-300 mb-2 md:mb-0">
                   <MdOutlineArrowBack /> Back to Dashboard
                 </Link>
-                <FaBell className="text-gray-600 text-sm w-6 h-6 md:w-auto md:h-auto" />
+              
                 <div className="relative">
                   <div
                     className="w-6 h-6 bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer"
@@ -168,7 +166,7 @@ const Header = ({ variant = "default" }) => {
                   <FaFileExcel />XLSX
                 </button>
               </div> */}
-              <FaBell className="text-gray-600 text-sm w-6 h-6 md:w-auto md:h-auto mb-2 md:mb-0" />
+            
               <div className="relative">
                 <div
                   className="w-6 h-6 bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer"
@@ -218,10 +216,7 @@ const Header = ({ variant = "default" }) => {
                   placeholder="Search..."
                   className="border border-gray-300 rounded px-3 py-1 text-sm w-full md:w-48 outline-none mb-2 md:mb-0"
                 />
-                <button className="bg-blue-600 text-white px-4 py-1 rounded text-sm hover:bg-blue-700 w-full md:w-auto mb-2 md:mb-0">
-                  <FaBars className="inline mr-1" /> Menu
-                </button>
-                <FaBell className="text-gray-600 cursor-pointer w-6 h-6 md:w-auto md:h-auto mb-2 md:mb-0" />
+              
                 <div className="relative">
                   <div
                     className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center cursor-pointer"
