@@ -11,24 +11,6 @@ const RealTimeAlert = () => {
   const [isLoading, setIsLoading] = useState(true);
   const previousAlertId = useRef(null);
 
-  // Function to convert ISO to local time
-  const convertToLocalTime = (isoDate) => {
-    const date = new Date(isoDate);
-    if (isNaN(date.getTime())) {
-      console.error('Invalid ISO date:', isoDate);
-      return 'Invalid Date';
-    }
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-    });
-  };
-
   // Function to get missing PPE items for each person separately
   const getMissingPPE = (alert) => {
     const allPPE = Object.keys(ALERT_TYPE_MAP);
@@ -68,7 +50,7 @@ const RealTimeAlert = () => {
         setAlertQueue(
           personAlerts.map((alert) => ({
             ...alert,
-            localTime: convertToLocalTime(latestAlert.recordedAt),
+            recordedAt: latestAlert.recordedAt, // Use raw ISO timestamp
             macAddress: latestAlert.macAddress,
             type: 'actual-alert',
           }))
@@ -88,7 +70,7 @@ const RealTimeAlert = () => {
         setIsExiting(false);
         setCurrentAlert({
           message: 'Error fetching alerts',
-          localTime: convertToLocalTime(new Date().toISOString()),
+          recordedAt: new Date().toISOString(), // Use raw ISO timestamp
           macAddress: 'N/A',
           type: 'error',
           hasMissing: false,
@@ -220,7 +202,7 @@ const RealTimeAlert = () => {
               <div className="mt-2 text-xs text-slateColor space-y-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
                 <p className="flex items-center">
                   <span className="font-medium w-12">Time:</span>
-                  <span className="flex-1 font-mono">{currentAlert.localTime}</span>
+                  <span className="flex-1 font-mono">{currentAlert.recordedAt}</span>
                 </p>
                 <p className="flex items-center">
                   <span className="font-medium w-12">MAC:</span>
