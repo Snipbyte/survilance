@@ -5,7 +5,8 @@ import { ALERT_TYPE_MAP } from '../../../../../lib/alertTypes';
 
 const RealTimeAlert = () => {
   const [alerts, setAlerts] = useState([]);
-  const [newAlert, setNewAlert] = useState(null);
+  const [alertQueue, setAlertQueue] = useState([]);
+  const [currentAlert, setCurrentAlert] = useState(null);
   const [isExiting, setIsExiting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const previousAlertId = useRef(null);
@@ -24,19 +25,25 @@ const RealTimeAlert = () => {
     });
   };
 
-  // Function to get missing PPE items
+  // Function to get missing PPE items for each person separately
   const getMissingPPE = (alert) => {
     const allPPE = Object.keys(ALERT_TYPE_MAP);
-    const personAlerts = Object.entries(alert.alertTypeCounts).map(([personId, types]) => {
+    return Object.entries(alert.alertTypeCounts).map(([personId, types]) => {
       const detectedPPE = Object.keys(types).filter((key) => types[key]);
       const missingPPE = allPPE
         .filter((key) => !detectedPPE.includes(key))
         .map((key) => ALERT_TYPE_MAP[key] || `Unknown (${key})`);
-      return missingPPE.length > 0
-        ? `Person ${personId}: Missing ${missingPPE.join(', ')}`
-        : `Person ${personId}: All PPE detected`;
+      if (missingPPE.length > 3) {
+        missingPPE.splice(3, missingPPE.length, '...');
+      }
+      return {
+        personId,
+        message: missingPPE.length > 0
+          ? `Person ${personId}: Missing ${missingPPE.join(', ')}`
+          : `Person ${personId}: All PPE detected`,
+        hasMissing: missingPPE.length > 0,
+      };
     });
-    return personAlerts.length > 0 ? personAlerts.join(' | ') : 'No PPE issues detected';
   };
 
   // Function to fetch alerts
@@ -44,105 +51,121 @@ const RealTimeAlert = () => {
     try {
       setIsLoading(true);
       const response = await getAlerts('PPE', 1, 10);
-      const latestAlert = response.AlarmHistoryData[0];
-
+      console.log('API response:', JSON.stringify(response, null, 2));
+      const latestAlert = response.AlarmHistoryData?.[0];
       console.log('Fetched latest alert:', latestAlert?._id, 'Previous alert:', previousAlertId.current);
 
-      // If no alerts found
       if (!latestAlert) {
-        // Only show "No alerts found" if we don't have any previous alerts
-        if (previousAlertId.current === null) {
-          setNewAlert({
+        console.log('No latest alert found');
+        if (!previousAlertId.current && currentAlert?.message !== 'No alerts found') {
+          setIsExiting(false);
+          setCurrentAlert({
             message: 'No alerts found',
             localTime: convertToLocalTime(new Date()),
             macAddress: 'N/A',
-            type: 'no-alerts'
+            type: 'no-alerts',
           });
         }
-        // Don't update if we already have "no alerts" state
         return;
       }
 
-      // Check if this is a genuinely new alert
       if (latestAlert._id !== previousAlertId.current) {
-        console.log('New alert detected, showing notification');
+        console.log('New alert detected, updating queue');
         previousAlertId.current = latestAlert._id;
-        
-        setIsExiting(false);
-        setNewAlert({
-          ...latestAlert,
+        const personAlerts = getMissingPPE(latestAlert);
+        setAlertQueue(personAlerts.map((alert) => ({
+          ...alert,
           localTime: convertToLocalTime(latestAlert.recordedAt),
-          message: getMissingPPE(latestAlert),
-          type: 'actual-alert'
+          macAddress: latestAlert.macAddress,
+          type: 'actual-alert',
+        })));
+        setAlerts((prev) => {
+          const newAlerts = [latestAlert, ...prev].slice(0, 5);
+          console.log('Updated alerts:', newAlerts);
+          return newAlerts;
         });
-        
-        // Update alerts list for history
-        setAlerts(prev => [latestAlert, ...prev].slice(0, 5));
       } else {
-        console.log('No new alerts, keeping current state');
-        // Don't set "No new alerts" message to avoid flickering
-        // Only update if we have an actual alert to show
+        console.log('Same alert, setting "No new alerts"');
+        if (currentAlert?.message !== 'No new alerts') {
+          setIsExiting(false);
+          setCurrentAlert({
+            message: 'No new alerts',
+            localTime: convertToLocalTime(new Date()),
+            macAddress: latestAlert.macAddress,
+            type: 'no-new-alerts',
+          });
+          setAlertQueue([]); // Clear queue to avoid re-showing old alerts
+        }
       }
     } catch (error) {
       console.error('Error fetching alerts:', error);
-      setIsExiting(false);
-      setNewAlert({
-        message: 'Error fetching alerts',
-        localTime: convertToLocalTime(new Date()),
-        macAddress: 'N/A',
-        type: 'error'
-      });
+      if (currentAlert?.message !== 'Error fetching alerts') {
+        setIsExiting(false);
+        setCurrentAlert({
+          message: 'Error fetching alerts',
+          localTime: convertToLocalTime(new Date()),
+          macAddress: 'N/A',
+          type: 'error',
+        });
+        setAlertQueue([]);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Poll every 5 seconds
+  // Poll every 10 seconds
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 5000);
-    return () => clearInterval(interval);
-  }, []); // Remove alerts dependency to avoid infinite loops
+    const interval = setInterval(fetchAlerts, 10000);
+    return () => {
+      console.log('Clearing interval');
+      clearInterval(interval);
+    };
+  }, []);
 
-  // Auto-dismiss notification with exit animation
+  // Cycle through alert queue
   useEffect(() => {
-    if (newAlert && newAlert.type === 'actual-alert') {
-      console.log('Auto-dismissing actual alert');
+    if (alertQueue.length > 0 && !currentAlert) {
+      console.log('Showing next alert from queue:', alertQueue[0]);
+      setIsExiting(false);
+      setCurrentAlert(alertQueue[0]);
+      setAlertQueue((prev) => prev.slice(1));
+    }
+  }, [alertQueue, currentAlert]);
+
+  // Auto-dismiss alert after 10 seconds
+  useEffect(() => {
+    if (currentAlert) {
+      console.log('Displaying alert:', currentAlert);
       const timeout = setTimeout(() => {
+        console.log('Auto-dismissing alert');
         setIsExiting(true);
-        setTimeout(() => setNewAlert(null), 500);
-      }, 3000);
+        setTimeout(() => {
+          setCurrentAlert(null);
+          console.log('currentAlert cleared');
+        }, 500); // Match exit animation duration
+      }, currentAlert.type === 'actual-alert' ? 10000 : 5000); // 10s for actual alerts, 5s for status messages
       return () => clearTimeout(timeout);
     }
-    
-    // For error or "no alerts" messages, don't auto-dismiss
-    // Or dismiss them after a shorter time if desired
-    if (newAlert && (newAlert.type === 'error' || newAlert.type === 'no-alerts')) {
-      console.log('Auto-dismissing status message');
-      const timeout = setTimeout(() => {
-        setIsExiting(true);
-        setTimeout(() => setNewAlert(null), 500);
-      }, 3000); // Shorter duration for status messages
-      return () => clearTimeout(timeout);
-    }
-  }, [newAlert]);
+  }, [currentAlert]);
 
   // Don't show anything while loading initial data
-  if (isLoading && !newAlert) {
+  if (isLoading && !currentAlert) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-8 right-8 z-50 font-poppins">
-      {newAlert && (
+    <div className="fixed bottom-8 right-8 z-50 font-poppins max-w-md">
+      {currentAlert && (
         <div
-          className={`relative bg-gradient-to-br from-lightCard via-white to-blueColor/10 text-headingColor p-6 rounded-2xl shadow-2xl max-w-md w-full border border-blueColor/30 backdrop-blur-md transform transition-all ${isExiting ? 'animate-alert-exit' : 'animate-alert-enter'}`}
+          className={`relative bg-gradient-to-br from-lightCard to-blueColor/5 text-headingColor p-5 rounded-xl shadow-xl w-full border border-blueColor/20 backdrop-blur-md transform transition-all ${isExiting ? 'animate-alert-exit' : 'animate-alert-enter'}`}
         >
-          <div className="flex items-start space-x-4">
+          <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 relative">
-              <div className="absolute inset-0 bg-blueColor/20 rounded-full animate-pulse" />
+              <div className="absolute inset-0 bg-blueColor/20 rounded-full animate-pulse opacity-50" />
               <svg
-                className="w-8 h-8 text-blueColor relative"
+                className={`w-7 h-7 ${currentAlert.hasMissing ? 'text-red-500' : 'text-blueColor'} relative`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -157,25 +180,26 @@ const RealTimeAlert = () => {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-headingColor flex items-center">
-                  {newAlert.type === 'actual-alert' ? 'PPE Compliance Alert' : 
-                   newAlert.type === 'error' ? 'System Alert' : 'Alert Status'}
-                  {newAlert.message.includes('Missing') && (
-                    <span className="ml-2 px-2.5 py-1 bg-red-100 text-red-600 text-xs font-semibold rounded-full animate-pulse">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-bold text-headingColor flex items-center">
+                  {currentAlert.type === 'actual-alert' ? 'PPE Compliance' : 
+                   currentAlert.type === 'error' ? 'System Alert' : 'Alert Status'}
+                  {currentAlert.hasMissing && (
+                    <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded-full animate-pulse">
                       URGENT
                     </span>
                   )}
                 </h3>
                 <button
                   onClick={() => {
+                    console.log('Close button clicked');
                     setIsExiting(true);
-                    setTimeout(() => setNewAlert(null), 500);
+                    setTimeout(() => setCurrentAlert(null), 500);
                   }}
                   className="text-slateColor hover:text-red-500 transition-all duration-200 transform hover:scale-110 active:scale-95"
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -190,40 +214,37 @@ const RealTimeAlert = () => {
                   </svg>
                 </button>
               </div>
-              
-              {/* Progress bar only for actual alerts */}
-              {newAlert.type === 'actual-alert' && (
-                <div className="w-full bg-gray-200/50 rounded-full h-1.5 mb-3 overflow-hidden">
+              {currentAlert.type === 'actual-alert' && (
+                <div className="w-full bg-gray-200/30 rounded-full h-1 mb-2 overflow-hidden">
                   <div
-                    className="h-1.5 bg-gradient-to-r from-blueColor to-red-500 rounded-full animate-shrink"
+                    className="h-1 bg-gradient-to-r from-blueColor to-red-500 rounded-full animate-shrink"
                   />
                 </div>
               )}
-              
               <p
-                className={`text-sm font-medium p-3 rounded-lg ${
-                  newAlert.message.includes('Missing')
+                className={`text-sm font-medium p-2 rounded-lg ${
+                  currentAlert.hasMissing
                     ? 'text-red-600 bg-red-50 border border-red-100'
-                    : newAlert.type === 'error'
+                    : currentAlert.type === 'error'
                     ? 'text-yellow-600 bg-yellow-50 border border-yellow-100'
                     : 'text-paraColor bg-gray-50 border border-gray-100'
                 }`}
               >
-                {newAlert.message}
+                {currentAlert.message}
               </p>
-              <div className="mt-3 text-xs text-slateColor space-y-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
+              <div className="mt-2 text-xs text-slateColor space-y-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
                 <p className="flex items-center">
                   <span className="font-medium w-12">Time:</span>
-                  <span className="flex-1 font-mono">{newAlert.localTime}</span>
+                  <span className="flex-1 font-mono">{currentAlert.localTime}</span>
                 </p>
                 <p className="flex items-center">
                   <span className="font-medium w-12">MAC:</span>
-                  <span className="flex-1 font-mono text-blueColor">{newAlert.macAddress}</span>
+                  <span className="flex-1 font-mono text-blueColor">{currentAlert.macAddress}</span>
                 </p>
               </div>
             </div>
           </div>
-          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blueColor/15 to-red-500/10 blur-2xl rounded-2xl opacity-60 animate-pulse" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blueColor/10 to-red-500/5 blur-xl rounded-xl opacity-70 animate-pulse" />
         </div>
       )}
     </div>

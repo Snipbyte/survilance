@@ -230,7 +230,7 @@ const PersonComplianceDataTable = ({ filters }) => {
       }
     };
     fetchData();
-  }, [filters, cameras]);
+  }, [filters]);
 
   const processAlertData = (alerts, zones, cameras, selectedPPEs) => {
     const processedData = [];
