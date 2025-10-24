@@ -66,7 +66,7 @@ export async function POST(request) {
       $or: [
         { deviceId: deviceId.trim().toUpperCase() },
         { deviceMAC: deviceMAC.trim().toUpperCase() },
-        { deviceIP: deviceIP.trim() },
+        // { deviceIP: deviceIP.trim() },
         { deviceName: deviceName.trim() }
       ],
       organizationId
@@ -74,7 +74,7 @@ export async function POST(request) {
 
     if (existing) {
       return NextResponse.json(
-        { error: "A device with the same ID, MAC, IP, or Name already exists." },
+        { error: "A device with the same ID, MAC, or Name already exists." },
         { status: 409 }
       );
     }
