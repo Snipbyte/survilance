@@ -254,7 +254,7 @@ const PersonComplianceDataTable = ({ filters }) => {
             camera: camera?.deviceName || macAddress,
             ppeTypes: ppeTypes.join(", ").replace(/-/g, " ").toUpperCase(),
             alertCount: ppeTypes.length,
-            recordedAt: new Date(recordedAt).toLocaleString(),
+            recordedAt: recordedAt,
           });
         }
       });
